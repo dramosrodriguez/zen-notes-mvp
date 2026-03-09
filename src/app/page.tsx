@@ -1,12 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { Sidebar } from "@/components/sidebar/Sidebar";
-import { FileText } from "lucide-react";
+import { FileText, AlertTriangle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { LoginModal } from "@/components/auth/LoginModal";
+import { User } from "@supabase/supabase-js";
 
 export default function Home() {
   const [openNotes, setOpenNotes] = useState<string[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoadingAuth(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        setOpenNotes([]); // Clear notes on logout
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-900">
@@ -14,33 +38,56 @@ export default function Home() {
         openNotes={openNotes} 
         onSelectNote={(id) => {
           if (!id) return;
-          
           if (openNotes.includes(id)) {
-            // Si el ID ya está abierto, lo cerramos (útil para el botón eliminar o hacer toggle)
             setOpenNotes(prev => prev.filter(nId => nId !== id));
           } else {
-            // Si no está abierto, intentamos abrirlo
             if (openNotes.length < 6) {
               setOpenNotes(prev => [...prev, id]);
             } else {
               alert("Has alcanzado el límite máximo de 6 notas abiertas simultáneamente.");
             }
           }
-        }} 
+        }}
+        user={user}
+        onShowLogin={() => setShowLoginModal(true)}
       />
-      <main className="flex-1 overflow-y-auto bg-zinc-100/30 dark:bg-zinc-900 flex flex-col">
-        {openNotes.length > 0 ? (
+      
+      <main className="flex-1 overflow-y-auto bg-zinc-100/30 dark:bg-zinc-900 flex flex-col relative">
+        {/* Banner para usuarios no autenticados */}
+        {!user && !loadingAuth && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/30 p-3 flex items-center justify-center gap-2 text-amber-800 dark:text-amber-500 text-sm">
+            <AlertTriangle size={16} />
+            <span>Estás en modo de prueba. <strong>Los cambios no se guardarán</strong>. <button onClick={() => setShowLoginModal(true)} className="underline font-medium hover:text-amber-900 dark:hover:text-amber-400">Inicia sesión</button> para guardar tus notas.</span>
+          </div>
+        )}
+
+        {loadingAuth ? (
+          <div className="flex-1 flex items-center justify-center text-zinc-400">Cargando...</div>
+        ) : !user ? (
+          /* Vista de Scratchpad (Nota de prueba) para NO autenticados */
+          <div className="flex-1 p-4 flex flex-col">
+            <div className="flex-1 bg-white dark:bg-zinc-950 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden relative flex flex-col">
+              <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 select-none">
+                <span className="text-xs font-semibold text-zinc-500 tracking-wider uppercase">Borrador Temporal</span>
+              </div>
+              <div className="flex-1 overflow-y-auto relative">
+                <TiptapEditor isMock={true} initialTitle="Nota de Prueba" />
+              </div>
+            </div>
+          </div>
+        ) : openNotes.length > 0 ? (
+          /* Vista normal de cuadrícula para Autenticados */
           <div className={`overflow-hidden flex-1 grid gap-4 p-4 ${
             openNotes.length === 1 ? 'grid-cols-1' :
             openNotes.length === 2 ? 'grid-cols-2' :
-            openNotes.length === 3 ? 'grid-cols-2' : // 1 fila de 2, 1 de 1. Opcional: grid-rows-2
+            openNotes.length === 3 ? 'grid-cols-2' : 
             openNotes.length === 4 ? 'grid-cols-2 grid-rows-2' :
             openNotes.length === 5 ? 'grid-cols-3' :
             openNotes.length === 6 ? 'grid-cols-3 grid-rows-2' : 'grid-cols-1'
           }`}>
             {openNotes.map((noteId, index) => (
               <div key={noteId} className={`flex flex-col bg-white dark:bg-zinc-950 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden relative ${
-                openNotes.length === 3 && index === 2 ? 'col-span-2' : '' // Hacer que la 3ra nota ocupe toda la parte inferior si hay 3
+                openNotes.length === 3 && index === 2 ? 'col-span-2' : '' 
               }`}>
                 {/* Cabecera / Pestaña del Editor */}
                 <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 select-none">
@@ -91,7 +138,7 @@ export default function Home() {
                 </div>
                 
                 {/* Contenido del Editor */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto relative">
                   <TiptapEditor noteId={noteId} />
                 </div>
               </div>
@@ -105,6 +152,12 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onSuccess={() => setShowLoginModal(false)} 
+      />
     </div>
   );
 }

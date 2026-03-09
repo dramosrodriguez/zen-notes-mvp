@@ -8,12 +8,16 @@ import { Search, Plus, PanelLeftClose, PanelLeft, FileText, Trash2, Download, Up
 import { useBackup } from "@/hooks/useBackup";
 import { supabase } from "@/lib/supabase";
 
+import { User } from "@supabase/supabase-js";
+
 interface SidebarProps {
   openNotes: string[];
   onSelectNote: (id: string | null) => void;
+  user?: User | null;
+  onShowLogin?: () => void;
 }
 
-export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
+export function Sidebar({ openNotes, onSelectNote, user, onShowLogin }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [notes, setNotes] = useState<any[]>([]);
@@ -42,6 +46,11 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
   }, [searchQuery]);
 
   useEffect(() => {
+    if (!user) {
+      setNotes([]);
+      return;
+    }
+    
     fetchNotes();
 
     // Subscribe to changes in Supabase
@@ -63,7 +72,7 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotes]);
+  }, [fetchNotes, user]);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -88,9 +97,20 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
           <PanelLeft size={20} className="text-zinc-500" />
         </Button>
         <Button variant="ghost" size="icon" onClick={async () => {
+          if (!user) {
+            onShowLogin?.();
+            return;
+          }
           const newId = crypto.randomUUID();
-          const { error } = await supabase.from('notes').insert({ id: newId, titulo: "Nueva Nota", contenido_markdown: "<p>Empieza a escribir aquí...</p>", fecha_creacion: Date.now() });
+          const { error } = await supabase.from('notes').insert({ 
+            id: newId, 
+            titulo: "Nueva Nota", 
+            contenido_markdown: "<p>Empieza a escribir aquí...</p>", 
+            fecha_creacion: Date.now(),
+            user_id: user.id 
+          });
           if (!error) { onSelectNote(newId); fetchNotes(); }
+          else console.error(error);
         }} className="hover:bg-zinc-200 dark:hover:bg-zinc-800">
           <Plus size={20} className="text-zinc-500" />
         </Button>
@@ -112,6 +132,10 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 space-y-3 flex-shrink-0">
         <Button 
           onClick={async () => {
+            if (!user) {
+              onShowLogin?.();
+              return;
+            }
             if (openNotes.length >= 6) {
               alert("Has alcanzado el límite máximo de 6 notas abiertas simultáneamente.");
               return;
@@ -124,6 +148,7 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
                 titulo: "Nueva Nota",
                 contenido_markdown: "<p>Empieza a escribir aquí...</p>",
                 fecha_creacion: Date.now(),
+                user_id: user.id
               });
             
             if (error) {
@@ -216,26 +241,54 @@ export function Sidebar({ openNotes, onSelectNote }: SidebarProps) {
           onChange={handleFileChange} 
         />
         
-        <div className="flex gap-2">
+        {user ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2 px-2 py-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg text-xs text-zinc-600 dark:text-zinc-400">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-5 h-5 bg-zinc-200 dark:bg-zinc-700 rounded flex items-center justify-center font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                  {user.email?.[0].toUpperCase() || 'U'}
+                </div>
+                <span className="truncate">{user.email}</span>
+              </div>
+              <button 
+                onClick={async () => await supabase.auth.signOut()}
+                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium shrink-0 px-1"
+                title="Cerrar sesión"
+              >
+                Salir
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="w-1/2 text-xs h-8 bg-transparent text-zinc-600 dark:text-zinc-400 flex gap-1.5"
+                onClick={exportData}
+                disabled={isExporting}
+                title="Exportar"
+              >
+                <Download size={14} />
+                <span className="truncate">Exportar</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-1/2 text-xs h-8 bg-transparent text-zinc-600 dark:text-zinc-400 flex gap-1.5"
+                onClick={handleImportClick}
+                disabled={isImporting}
+                title="Importar"
+              >
+                <Upload size={14} />
+                <span className="truncate">Importar</span>
+              </Button>
+            </div>
+          </div>
+        ) : (
           <Button 
-            variant="outline" 
-            className="w-1/2 text-xs h-8 bg-transparent text-zinc-600 dark:text-zinc-400 flex gap-2"
-            onClick={exportData}
-            disabled={isExporting}
+            onClick={onShowLogin}
+            className="w-full text-xs h-9 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 font-medium"
           >
-            <Download size={14} />
-            {isExporting ? "XPT..." : "Exportar"}
+            Iniciar Sesión
           </Button>
-          <Button 
-            variant="outline" 
-            className="w-1/2 text-xs h-8 bg-transparent text-zinc-600 dark:text-zinc-400 flex gap-2"
-            onClick={handleImportClick}
-            disabled={isImporting}
-          >
-            <Upload size={14} />
-            {isImporting ? "IMP..." : "Importar"}
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

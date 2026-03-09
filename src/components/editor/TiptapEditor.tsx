@@ -39,6 +39,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 interface TiptapEditorProps {
   noteId?: string;
   initialTitle?: string;
+  isMock?: boolean;
 }
 
 function ImageResizeControl({ editor }: { editor: any }) {
@@ -114,15 +115,17 @@ function ImageResizeControl({ editor }: { editor: any }) {
   );
 }
 
-export function TiptapEditor({ noteId, initialTitle = "Nueva Nota" }: TiptapEditorProps) {
+export function TiptapEditor({ noteId, initialTitle = "Nueva Nota", isMock = false }: TiptapEditorProps) {
   const [title, setTitle] = useState(noteId ? "" : initialTitle);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(!noteId);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(noteId || null);
   const [, setRefreshTick] = useState(0);
 
   const saveToDb = useCallback(async (content: string, noteTitle: string) => {
+    if (isMock) return; // No guardamos notas de prueba
+    
     setIsSaving(true);
     try {
       if (currentNoteId) {
@@ -138,6 +141,9 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota" }: TiptapEdit
         if (error) throw error;
       } else {
         // Insert new note in Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
         const newId = crypto.randomUUID();
         const { data, error } = await supabase
           .from('notes')
@@ -147,6 +153,7 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota" }: TiptapEdit
             contenido_markdown: content,
             etiquetas: [],
             fecha_creacion: Date.now(),
+            user_id: session.user.id
           })
           .select()
           .single();
@@ -222,7 +229,27 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota" }: TiptapEdit
           // Explicitly new note requested by the Sidebar / Home
           if (editor) {
             setTitle("Nueva Nota");
-            editor.commands.setContent('<p>Empieza a escribir aquí...</p>');
+            if (isMock) {
+              editor.commands.setContent(`
+                <h1>¡Bienvenido a Zen Notes! 🧘</h1>
+                <p>Esta es una <strong>nota de prueba</strong>. Los cambios que hagas aquí no se guardarán a menos que inicies sesión.</p>
+                <h2>Características de edición</h2>
+                <p>Puedes aplicar diferentes estilos de texto, como <em>cursiva</em>, <strong>negrita</strong>, <s>tachado</s>, o <span style="color:#ef4444">aplicar</span> <span style="color:#3b82f6">colores</span> <span style="color:#10b981">distintos</span>.</p>
+                <h3>Estructura y Listas</h3>
+                <ul>
+                  <li>Puedes crear listas de viñetas para tus ideas sueltas.</li>
+                  <li>Incluso listas anidadas.</li>
+                </ul>
+                <ol>
+                  <li>Primer paso para organizarte.</li>
+                  <li>Segundo paso: apuntarlo todo.</li>
+                </ol>
+                <blockquote>"La creatividad simplemente consiste en conectar cosas." - Steve Jobs</blockquote>
+                <p>¡Selecciona cualquier parte de este texto para probar el menú emergente y cambiar su formato!</p>
+              `);
+            } else {
+              editor.commands.setContent('<p>Empieza a escribir aquí...</p>');
+            }
           }
         }
       } catch (error) {
@@ -274,18 +301,20 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota" }: TiptapEdit
 
       {/* Toolbar superior estática (opcional, como botón de imagen) */}
       <div className="flex items-center mb-6 gap-2 border-b border-zinc-100 dark:border-zinc-800/50 pb-4">
-        <label className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors ${
-          isUploadingImage 
+        <label className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          (isUploadingImage || isMock)
           ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' 
-          : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300'
-        }`}>
+          : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 cursor-pointer'
+        }`}
+        title={isMock ? "Inicia sesión para subir imágenes" : ""}
+        >
           {isUploadingImage ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
           <span>{isUploadingImage ? 'Subiendo...' : 'Añadir Imagen'}</span>
           <input 
             type="file" 
             accept="image/*" 
             className="hidden" 
-            disabled={isUploadingImage || !editor}
+            disabled={isUploadingImage || !editor || isMock}
             onChange={async (e) => {
               if (e.target.files && e.target.files[0] && editor) {
                 try {

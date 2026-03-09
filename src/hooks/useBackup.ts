@@ -41,7 +41,14 @@ export function useBackup() {
 
     // === IMPORTAR ===
     const importData = async (file: File) => {
-        return new Promise<boolean>((resolve) => {
+        return new Promise<boolean>(async (resolve) => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) {
+                alert("Debes iniciar sesión para importar notas.");
+                resolve(false);
+                return;
+            }
+
             try {
                 setIsImporting(true);
                 const reader = new FileReader();
@@ -57,10 +64,13 @@ export function useBackup() {
                             return;
                         }
 
-                        const notesToImport = parsedData.notes;
+                        // Asignamos el user_id actual a cada nota importada para cumplir con la política RLS
+                        const notesToImport = parsedData.notes.map((note: any) => ({
+                            ...note,
+                            user_id: session.user.id
+                        }));
 
                         // Upsert notes into Supabase
-                        // Supabase allows 'upsert' which handles conflicts based on id (primary key)
                         const { error } = await supabase
                             .from('notes')
                             .upsert(notesToImport);
@@ -68,9 +78,9 @@ export function useBackup() {
                         if (error) throw error;
 
                         resolve(true);
-                    } catch (e) {
+                    } catch (e: any) {
                         console.error("Error analizando el JSON o subiendo a Supabase:", e);
-                        alert("Error al procesar la importación.");
+                        alert("Error al procesar la importación: " + (e.message || JSON.stringify(e)));
                         resolve(false);
                     }
                 };
