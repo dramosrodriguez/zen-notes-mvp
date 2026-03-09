@@ -4,9 +4,10 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, PanelLeftClose, PanelLeft, FileText, Trash2, Download, Upload } from "lucide-react";
+import { Search, Plus, PanelLeftClose, PanelLeft, FileText, Trash2, Download, Upload, Moon, Sun, Laptop } from "lucide-react";
 import { useBackup } from "@/hooks/useBackup";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/components/ThemeProvider";
 
 import { User } from "@supabase/supabase-js";
 
@@ -25,6 +26,7 @@ export function Sidebar({ openNotes, onSelectNote, user, onShowLogin }: SidebarP
   // Custom Hook for Backup
   const { exportData, importData, isExporting, isImporting } = useBackup();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme } = useTheme();
 
   // Fetch notes from Supabase
   const fetchNotes = useCallback(async () => {
@@ -124,9 +126,26 @@ export function Sidebar({ openNotes, onSelectNote, user, onShowLogin }: SidebarP
         <h2 className="font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
           Zen Notes
         </h2>
-        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 hover:bg-zinc-200 dark:hover:bg-zinc-800">
-          <PanelLeftClose size={16} className="text-zinc-500" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              if (theme === 'light') setTheme('dark');
+              else if (theme === 'dark') setTheme('system');
+              else setTheme('light');
+            }} 
+            className="h-8 w-8 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+            title="Cambiar tema"
+          >
+            {theme === 'light' ? <Sun size={16} className="text-zinc-500" /> : 
+             theme === 'dark' ? <Moon size={16} className="text-zinc-500" /> : 
+             <Laptop size={16} className="text-zinc-500" />}
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 hover:bg-zinc-200 dark:hover:bg-zinc-800">
+            <PanelLeftClose size={16} className="text-zinc-500" />
+          </Button>
+        </div>
       </div>
 
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 space-y-3 flex-shrink-0">
