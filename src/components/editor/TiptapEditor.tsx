@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import { useCallback, useEffect, useState } from 'react';
-import { Bold, Italic, Strikethrough, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Undo2, Redo2, ImageIcon, Loader2 } from 'lucide-react';
+import { Bold, Italic, Strikethrough, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Undo2, Redo2, ImageIcon, Loader2, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 import { supabase, uploadImage } from '@/lib/supabase';
 import Image from '@tiptap/extension-image';
 
@@ -35,6 +35,7 @@ const CustomImage = Image.extend({
 
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
+import TextAlign from '@tiptap/extension-text-align';
 
 interface TiptapEditorProps {
   noteId?: string;
@@ -91,7 +92,6 @@ function ImageResizeControl({ editor }: { editor: any }) {
 
       <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 my-auto mx-1"></div>
       
-      {/* Input manual */}
       <div className="flex items-center gap-1.5">
         <label className="text-xs font-medium text-zinc-500">px:</label>
         <input
@@ -111,6 +111,33 @@ function ImageResizeControl({ editor }: { editor: any }) {
       >
         Ok
       </button>
+
+      <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 my-auto mx-1"></div>
+
+      {/* Botones de Alineación */}
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          className={`h-7 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+          title="Alinear a la izquierda"
+        >
+          <AlignLeft size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          className={`h-7 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'center' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+          title="Centrar"
+        >
+          <AlignCenter size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          className={`h-7 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'right' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+          title="Alinear a la derecha"
+        >
+          <AlignRight size={14} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -175,6 +202,9 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota", isMock = fal
       StarterKit,
       TextStyle,
       Color,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
       CustomImage.configure({
         HTMLAttributes: {
           class: 'rounded-lg border border-zinc-200 dark:border-zinc-800 max-w-full',
@@ -203,7 +233,8 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota", isMock = fal
         // Añadimos [&_strong]:!text-inherit para evitar que el plugin "prose" de Tailwind pise los colores del texto cuando es negrita.
         // Lo mismo para los headings si queremos que admitan color, aunque por ahora aseguramos strong y headings genéricos si hace falta.
         // Por consistencia en Markdown, garantizamos que strong e inline-elements hereden.
-        class: 'prose prose-zinc prose-sm sm:prose-base dark:prose-invert focus:outline-none max-w-none min-h-[50vh] [&_strong]:!text-inherit [&_h1]:!text-inherit [&_h2]:!text-inherit [&_h3]:!text-inherit',
+        // Convertimos [&_img] a inline-block para que respeten la alineación de texto del párrafo (TextAlign).
+        class: 'prose prose-zinc prose-sm sm:prose-base dark:prose-invert focus:outline-none max-w-none min-h-[50vh] [&_strong]:!text-inherit [&_h1]:!text-inherit [&_h2]:!text-inherit [&_h3]:!text-inherit [&_img]:auto [&_img]:inline-block',
       },
     },
   });
@@ -395,6 +426,37 @@ export function TiptapEditor({ noteId, initialTitle = "Nueva Nota", isMock = fal
                 title="Título 3"
               >
                 <Heading3 size={16} />
+              </button>
+
+              <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 my-auto mx-1"></div>
+
+              <button
+                onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'left' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+                title="Alinear a la izquierda"
+              >
+                <AlignLeft size={16} />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'center' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+                title="Centrar"
+              >
+                <AlignCenter size={16} />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'right' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+                title="Alinear a la derecha"
+              >
+                <AlignRight size={16} />
+              </button>
+              <button
+                onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                className={`p-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-400'}`}
+                title="Justificar"
+              >
+                <AlignJustify size={16} />
               </button>
 
               <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-700 my-auto mx-1"></div>
