@@ -1,32 +1,50 @@
-# Zen Notes MVP
+# Project: Zen Notes MVP
 
-Zen Notes is a minimalist, local-first markdown note-taking application. 
+Zen Notes MVP is a Next.js 16-based application designed for note-taking. It leverages Supabase for backend services, Tiptap for rich text editing, and Tailwind CSS 4 for styling.
 
-## Tech Stack
-- **Framework:** [Next.js](https://nextjs.org) 16.1.6 (App Router)
+## Project Overview
+
+- **Framework:** Next.js 16.1.6 (App Router)
 - **Language:** TypeScript
-- **Database/Auth:** [Supabase](https://supabase.com)
-- **Styling:** Tailwind CSS 4
+- **Styling:** Tailwind CSS 4.0
+- **Database/Backend:** Supabase
 - **Editor:** Tiptap (Starter Kit, Text Style, Color extensions)
-- **Icons:** Lucide React
-- **PWA:** Serwist (Service Workers)
-- **UI Components:** Radix UI
+- **UI Components:** shadcn/ui
+- **PWA Support:** Serwist
 
 ## Building and Running
-- **Development:** `npm run dev`
-- **Build:** `npm run build`
-- **Start:** `npm run start`
-- **Lint:** `npm run lint`
 
-## Project Structure
-- `src/app/`: Next.js App Router routes and global layout.
-- `src/components/`: Reusable React components including the editor and sidebar.
-- `src/lib/`: Core utilities including Supabase client initialization.
-- `src/hooks/`: Custom hooks like `useBackup`.
-- `public/`: Static assets and PWA configuration files.
+Ensure you have your dependencies installed:
+```bash
+npm install
+```
+
+### Development
+Run the development server:
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+### Building
+Build the project for production:
+```bash
+npm run build
+```
+
+### Linting
+Run the linter:
+```bash
+npm run lint
+```
 
 ## Development Conventions
-- Use `shadcn` for UI component management.
-- Follow the App Router structure for routing.
-- Maintain environment variables in `.env` for Supabase configuration.
-- Use Tailwind CSS 4+ utility classes for styling.
+
+- **Directory Structure:**
+  - `src/app/`: Next.js App Router files.
+  - `src/components/`: React components, grouped by domain (e.g., `editor`, `sidebar`, `ui`).
+  - `src/lib/`: Shared utility functions and Supabase configuration.
+  - `src/hooks/`: Custom React hooks.
+- **Styling:** Utilize Tailwind CSS 4 utility classes directly in components.
+- **Components:** Components under `src/components/ui/` are standard shadcn-style components.
+- **State Management:** Uses React hooks.
